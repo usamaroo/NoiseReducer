@@ -1,0 +1,63 @@
+import numpy as np
+from scipy.io import wavfile
+from scipy.fftpack import rfft, rfftfreq, irfft
+import matplotlib.pyplot as plt
+import wave
+
+def remove_noise_from_wav():
+    sample_rate, data = wavfile.read('BadHabitKooks64.wav')
+    left = data[:, 0]
+    right = data[:, 1]
+    with wave.open("BadHabitKooks64.wav") as lengthfinder:
+        duration = lengthfinder.getnframes() / lengthfinder.getframerate()
+        print(sample_rate)
+    number_samples = int(sample_rate * duration)
+
+    fft_left = rfft(left)
+    left_spectrum = fft_left
+    left_freqs = rfftfreq(number_samples, 1 / sample_rate)
+
+
+
+    fft_right = rfft(right)
+    right_spectrum = fft_right
+    right_freqs = rfftfreq(number_samples, 1 / sample_rate)
+
+
+
+    # nyquist theorm
+    freq = len(left_freqs) / (sample_rate / 2)
+    freq_cutoff = int(freq * 3000)
+
+
+    left_spectrum[freq_cutoff:] = 0
+    plt.plot(left_freqs, np.abs(left_spectrum))
+    plt.show()
+    right_spectrum[freq_cutoff:] = 0
+
+    left_filtered = irfft(left_spectrum)
+    right_filtered = irfft(right_spectrum)
+
+    filtered_signal = np.column_stack((left_filtered, right_filtered))
+    filtered_signal = filtered_signal.astype(np.int16)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    fig.suptitle('Unfiltered / Filtered')
+
+    ax1.plot(np.arange(len(data)) / sample_rate, data)
+    ax1.set_xlabel('time (s)')
+    ax1.set_ylabel('Amp')
+
+    ax2.plot(np.arange(len(filtered_signal)) / sample_rate, filtered_signal)
+    ax2.set_xlabel('time (s)')
+    ax2.set_ylabel('Amp')
+
+    plt.show()
+
+    return filtered_signal, sample_rate
+
+
+sample_rate = None
+filtered_signal, sample_rate = remove_noise_from_wav()
+print(filtered_signal)
+wavfile.write("filtered_signal.wav", sample_rate, filtered_signal)
